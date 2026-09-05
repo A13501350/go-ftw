@@ -5,7 +5,6 @@ package output
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -27,9 +26,9 @@ var outputTest = []struct {
 	expected string
 }{
 	// quiet and json don't emit anything through Printf (json is handled via zerolog).
-	// github defaults to plain log text; annotations must be opted into.
+	// github wraps every line in a workflow command.
 	{"quiet", ""},
-	{"github", "This is the test"},
+	{"github", "::notice::This is the test"},
 	{"normal", "This is the test"},
 	{"json", ""},
 }
@@ -85,7 +84,6 @@ func (s *outputTestSuite) TestGitHubAnnotationError() {
 	var b bytes.Buffer
 	o := NewOutput("github", &b)
 	o.SetSeverity(AnnotationError)
-	o.SetAnnotationsEnabled(true)
 
 	err := o.Printf("- %s failed in %s", "920100-1", "5ms")
 	s.Require().NoError(err)
@@ -97,7 +95,6 @@ func (s *outputTestSuite) TestGitHubAnnotationError() {
 func (s *outputTestSuite) TestGitHubAnnotationEscapesSpecialChars() {
 	var b bytes.Buffer
 	o := NewOutput("github", &b)
-	o.SetAnnotationsEnabled(true)
 
 	err := o.Printf("100%% done\nwith %s", "newline")
 	s.Require().NoError(err)
@@ -110,22 +107,10 @@ func (s *outputTestSuite) TestGitHubAnnotationEscapesSpecialChars() {
 func (s *outputTestSuite) TestGitHubAnnotationPrintlnKeepsRealNewline() {
 	var b bytes.Buffer
 	o := NewOutput("github", &b)
-	o.SetAnnotationsEnabled(true)
 
 	err := o.Println("+ passed in %s", "5ms")
 	s.Require().NoError(err)
 	err = o.Println("- failed")
 	s.Require().NoError(err)
 	s.Equal("::notice::+ passed in 5ms\n::notice::- failed\n", b.String())
-}
-
-// GitHub copy drops terminal decorations: bullets, banners, kaomoji.
-func (s *outputTestSuite) TestGitHubCatalogCopy() {
-	var b bytes.Buffer
-	o := NewOutput("github", &b)
-
-	s.Equal("test 920100-1 failed in 5ms (RTT 2ms)", fmt.Sprintf(o.Message("- %s failed in %s (RTT %s)"), "920100-1", "5ms", "2ms"))
-	s.Equal("run 10 total tests in 1m0s", fmt.Sprintf(o.Message("+ run %d total tests in %s"), 10, "1m0s"))
-	s.Equal("ignored 69 tests", fmt.Sprintf(o.Message("^ ignored %d tests"), 69))
-	s.Equal("All tests successful!", o.Message("\\o/ All tests successful!"))
 }

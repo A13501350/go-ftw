@@ -110,10 +110,6 @@ func (stats *RunStats) printSummary(out *output.Output) {
 			b, _ := json.Marshal(stats)
 			out.RawPrint(string(b))
 		} else {
-			// The run summary is the useful annotation surface: a handful of
-			// notices instead of thousands of per-test lines.
-			out.SetAnnotationsEnabled(true)
-			defer out.SetAnnotationsEnabled(false)
 			out.Println(out.Message("+ run %d total tests in %s"), stats.Run, stats.TotalTime)
 			out.Println(out.Message(">> skipped %d tests"), len(stats.Skipped))
 			if len(stats.Ignored) > 0 {

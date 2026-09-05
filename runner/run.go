@@ -354,34 +354,25 @@ func checkTestSanity(stage *schema.Stage) error {
 }
 
 func displayResult(testCase *schema.Test, rc *TestRunContext, result TestResult, roundTripTime time.Duration) {
-	// Always reset afterwards so other output is not mislabeled.
-	defer func() {
-		rc.Output.SetSeverity(output.AnnotationNotice)
-		rc.Output.SetAnnotationsEnabled(false)
-	}()
+	// Always reset to notice afterwards so other output is not mislabeled.
+	defer rc.Output.SetSeverity(output.AnnotationNotice)
 	switch result {
 	case Success:
-		// Passed tests stay plain log text: annotating every pass would be
-		// noise (and GitHub caps displayed annotations anyway).
 		if !rc.ShowOnlyFailed {
 			rc.Output.Println(rc.Output.Message("+ passed in %s (RTT %s)"), rc.CurrentStageDuration, roundTripTime)
 		}
 	case Failed:
-		rc.Output.SetAnnotationsEnabled(true)
 		rc.Output.SetSeverity(output.AnnotationError)
 		rc.Output.Println(rc.Output.Message("- %s failed in %s (RTT %s)"), testCase.IdString(), rc.CurrentStageDuration, roundTripTime)
 	case Ignored:
 		if !rc.ShowOnlyFailed {
-			rc.Output.SetAnnotationsEnabled(true)
-			rc.Output.Println(rc.Output.Message("= test ignored"))
+			rc.Output.Println(rc.Output.Message(":information:test ignored"))
 		}
 	case ForceFail:
-		rc.Output.SetAnnotationsEnabled(true)
-		rc.Output.Println(rc.Output.Message("= test forced to fail"))
+		rc.Output.Println(rc.Output.Message(":information:test forced to fail"))
 	case ForcePass:
 		if !rc.ShowOnlyFailed {
-			rc.Output.SetAnnotationsEnabled(true)
-			rc.Output.Println(rc.Output.Message("= test forced to pass"))
+			rc.Output.Println(rc.Output.Message(":information:test forced to pass"))
 		}
 	default:
 		// don't print anything if skipped test
