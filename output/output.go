@@ -61,6 +61,28 @@ var normalCatalog = catalog{
 	"- %d test(s) were forced to fail: %+q": ":index_pointing_up:%d test(s) were forced to fail: %+q",
 }
 
+// githubCatalog maps the same keys to copy suitable for GitHub annotations:
+// terminal decorations (bullet prefixes, banners, kaomoji) are dropped, since
+// they are noise next to the rendered annotation level (error/notice).
+var githubCatalog = catalog{
+	"** Starting tests!":                    "Starting tests!",
+	"** Running go-ftw!":                    "Running go-ftw!",
+	"=> executing tests in file %s":         "executing tests in file %s",
+	"+ passed in %s (RTT %s)":               "passed in %s (RTT %s)",
+	"- %s failed in %s (RTT %s)":            "test %s failed in %s (RTT %s)",
+	"= test ignored":                        "test ignored",
+	"= test forced to fail":                 "test forced to fail",
+	"= test forced to pass":                 "test forced to pass",
+	"¯\\_(ツ)_/¯ No tests were run":          "No tests were run",
+	"+ run %d total tests in %s":            "run %d total tests in %s",
+	">> skipped %d tests":                   "skipped %d tests",
+	"^ ignored %d tests":                    "ignored %d tests",
+	"^ forced to pass %d tests":             "forced to pass %d tests",
+	"\\o/ All tests successful!":            "All tests successful!",
+	"- %d test(s) failed to run: %+q":       "%d test(s) failed to run: %+q",
+	"- %d test(s) were forced to fail: %+q": "%d test(s) were forced to fail: %+q",
+}
+
 type Output struct {
 	OutputType Type
 	cat        catalog
@@ -69,6 +91,10 @@ type Output struct {
 	currentFile string
 	// severity is the severity used for GitHub annotation commands.
 	severity AnnotationSeverity
+	// annotationsEnabled gates whether GitHub output wraps lines in workflow
+	// commands. Only test results and the run summary should be annotated;
+	// banners and progress lines stay plain log text.
+	annotationsEnabled bool
 }
 
 // ValidTypes returns an array of the valid output types.
@@ -93,6 +119,9 @@ func (o *Output) Printf(format string, a ...interface{}) error {
 		s = fmt.Sprintf(format, a...)
 	case GitHub:
 		s = fmt.Sprintf(format, a...)
+		if !o.annotationsEnabled {
+			break
+		}
 		// Println appends the line break to the format string; that break
 		// must stay a real newline so each workflow command sits on its own
 		// line. Only the message body gets escaped.
@@ -149,7 +178,7 @@ func NewOutput(o string, w io.Writer) *Output {
 	case "quiet":
 		out.OutputType = Quiet
 	case "github":
-		out.cat = createPlainCatalog(normalCatalog)
+		out.cat = githubCatalog
 		out.OutputType = GitHub
 	case "json":
 		out.OutputType = JSON
@@ -200,6 +229,13 @@ func (o *Output) ClearCurrentTestFile() {
 // SetSeverity overrides the severity used for GitHub annotation commands.
 func (o *Output) SetSeverity(severity AnnotationSeverity) {
 	o.severity = severity
+}
+
+// SetAnnotationsEnabled toggles whether GitHub output wraps printed lines in
+// workflow commands. It is off by default: banners and progress lines are
+// plain log text; callers enable it around test results and the run summary.
+func (o *Output) SetAnnotationsEnabled(enabled bool) {
+	o.annotationsEnabled = enabled
 }
 
 func createPlainCatalog(c catalog) catalog {
