@@ -30,8 +30,9 @@ const (
 type AnnotationSeverity string
 
 const (
-	AnnotationNotice AnnotationSeverity = "notice"
-	AnnotationError  AnnotationSeverity = "error"
+	AnnotationNotice  AnnotationSeverity = "notice"
+	AnnotationWarning AnnotationSeverity = "warning"
+	AnnotationError   AnnotationSeverity = "error"
 )
 
 type catalog map[string]string
@@ -111,12 +112,14 @@ func githubCommand(severity, message string) string {
 	return "::" + severity + "::" + escapeWorkflow(message)
 }
 
-// escapeWorkflow escapes the characters that are not allowed inside a GitHub
-// workflow command. Order matters: '%' must be escaped first.
+// escapeWorkflow URL-encodes the characters that are not allowed inside a
+// GitHub workflow command. Order matters: '%' must be escaped first.
 func escapeWorkflow(s string) string {
 	s = strings.ReplaceAll(s, "%", "%25")
 	s = strings.ReplaceAll(s, "\r", "%0D")
 	s = strings.ReplaceAll(s, "\n", "%0A")
+	s = strings.ReplaceAll(s, ":", "%3A")
+	s = strings.ReplaceAll(s, ",", "%2C")
 	return s
 }
 

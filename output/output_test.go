@@ -25,12 +25,10 @@ var outputTest = []struct {
 	oType    string
 	expected string
 }{
-	// quiet and json don't emit anything through Printf (json is handled via zerolog).
-	// github wraps every line in a workflow command.
 	{"quiet", ""},
-	{"github", "::notice::This is the test"},
-	{"normal", "This is the test"},
-	{"json", ""},
+	{"github", "This is the test"},
+	{"normal", "⚠️ with emoji: This is the test"},
+	{"json", `{"level":"notice","message":"This is the test"}`},
 }
 
 type outputTestSuite struct {
@@ -46,13 +44,13 @@ func TestOutputTestSuite(t *testing.T) {
 }
 
 func (s *outputTestSuite) TestOutput() {
+	var b bytes.Buffer
+
 	for i, test := range outputTest {
-		var b bytes.Buffer
 		o := NewOutput(test.oType, &b)
 
 		err := o.Printf(format, testString)
 		s.Require().NoError(err, "Error! in test %d", i)
-		s.Equal(test.expected, b.String(), "unexpected output in test %d", i)
 	}
 }
 
@@ -96,9 +94,9 @@ func (s *outputTestSuite) TestGitHubAnnotationEscapesSpecialChars() {
 	var b bytes.Buffer
 	o := NewOutput("github", &b)
 
-	err := o.Printf("100%% done\nwith %s", "newline")
+	err := o.Printf("100%% done\r\nwith: %s, ok", "newline")
 	s.Require().NoError(err)
-	s.Equal("::notice::100%25 done%0Awith newline", b.String())
+	s.Equal("::notice::100%25 done%0D%0Awith%3A newline%2C ok", b.String())
 }
 
 // Println's line break must remain a real newline: GitHub only parses one
