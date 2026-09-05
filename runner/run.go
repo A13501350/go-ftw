@@ -59,6 +59,8 @@ func Run(runnerConfig *config.RunnerConfig, tests []*test.FTWTest, out *output.O
 		}
 	}
 
+	// Stop annotating with a test file before printing the run summary.
+	out.ClearCurrentTestFile()
 	runContext.Stats.printSummary(out)
 
 	defer cleanLogs(logLines)
@@ -70,6 +72,8 @@ func Run(runnerConfig *config.RunnerConfig, tests []*test.FTWTest, out *output.O
 // runContext contains information for the current test run
 // ftwTest is the test you want to run
 func RunTest(runContext *TestRunContext, ftwTest *test.FTWTest) error {
+	// Annotate subsequent output with the file currently under test.
+	runContext.Output.SetCurrentTestFile(ftwTest.FileName)
 	changed := true
 
 	for _, testCase := range ftwTest.Tests {
@@ -355,12 +359,15 @@ func checkTestSanity(stage *schema.Stage) error {
 }
 
 func displayResult(testCase *schema.Test, rc *TestRunContext, result TestResult, roundTripTime time.Duration) {
+	// Always reset to notice afterwards so other output is not mislabeled.
+	defer rc.Output.SetSeverity(output.AnnotationNotice)
 	switch result {
 	case Success:
 		if !rc.ShowOnlyFailed {
 			rc.Output.Println(rc.Output.Message("+ passed in %s (RTT %s)"), rc.CurrentStageDuration, roundTripTime)
 		}
 	case Failed:
+		rc.Output.SetSeverity(output.AnnotationError)
 		rc.Output.Println(rc.Output.Message("- %s failed in %s (RTT %s)"), testCase.IdString(), rc.CurrentStageDuration, roundTripTime)
 	case Ignored:
 		if !rc.ShowOnlyFailed {

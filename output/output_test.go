@@ -25,10 +25,11 @@ var outputTest = []struct {
 	oType    string
 	expected string
 }{
+	// quiet and json don't emit anything through Printf (json is handled via zerolog).
 	{"quiet", ""},
-	{"github", "This is the test"},
-	{"normal", "⚠️ with emoji: This is the test"},
-	{"json", `{"level":"notice","message":"This is the test"}`},
+	{"github", "::notice::This is the test"},
+	{"normal", "This is the test"},
+	{"json", ""},
 }
 
 type outputTestSuite struct {
@@ -44,13 +45,13 @@ func TestOutputTestSuite(t *testing.T) {
 }
 
 func (s *outputTestSuite) TestOutput() {
-	var b bytes.Buffer
-
 	for i, test := range outputTest {
+		var b bytes.Buffer
 		o := NewOutput(test.oType, &b)
 
 		err := o.Printf(format, testString)
 		s.Require().NoError(err, "Error! in test %d", i)
+		s.Equal(test.expected, b.String(), "unexpected output in test %d", i)
 	}
 }
 
@@ -76,4 +77,24 @@ func (s *outputTestSuite) TestPlainCatalogOutput() {
 		// reset buffer
 		b.Reset()
 	}
+}
+
+func (s *outputTestSuite) TestGitHubAnnotationWithFile() {
+	var b bytes.Buffer
+	o := NewOutput("github", &b)
+	o.SetCurrentTestFile("tests/920100.yaml")
+	o.SetSeverity(AnnotationError)
+
+	err := o.Printf("- %s failed in %s", "920100-1", "5ms")
+	s.Require().NoError(err)
+	s.Equal("::error file=tests/920100.yaml::- 920100-1 failed in 5ms", b.String())
+}
+
+func (s *outputTestSuite) TestGitHubAnnotationEscapesSpecialChars() {
+	var b bytes.Buffer
+	o := NewOutput("github", &b)
+
+	err := o.Printf("100%% done\nwith %s", "newline")
+	s.Require().NoError(err)
+	s.Equal("::notice::100%25 done%0Awith newline", b.String())
 }
