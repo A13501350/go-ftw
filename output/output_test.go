@@ -81,16 +81,17 @@ func (s *outputTestSuite) TestPlainCatalogOutput() {
 	}
 }
 
-func (s *outputTestSuite) TestGitHubAnnotationWithFile() {
+func (s *outputTestSuite) TestGitHubAnnotationError() {
 	var b bytes.Buffer
 	o := NewOutput("github", &b)
-	o.SetCurrentTestFile("tests/920100.yaml")
 	o.SetSeverity(AnnotationError)
 	o.SetAnnotationsEnabled(true)
 
 	err := o.Printf("- %s failed in %s", "920100-1", "5ms")
 	s.Require().NoError(err)
-	s.Equal("::error file=tests/920100.yaml::- 920100-1 failed in 5ms", b.String())
+	// file/line/endLine are deliberately omitted: go-ftw has no per-test
+	// line info, and a file without a line renders as a misleading `#L0`.
+	s.Equal("::error::- 920100-1 failed in 5ms", b.String())
 }
 
 func (s *outputTestSuite) TestGitHubAnnotationEscapesSpecialChars() {

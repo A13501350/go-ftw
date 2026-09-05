@@ -87,8 +87,6 @@ type Output struct {
 	OutputType Type
 	cat        catalog
 	w          io.Writer
-	// currentFile is the file path used as the annotation location for GitHub output.
-	currentFile string
 	// severity is the severity used for GitHub annotation commands.
 	severity AnnotationSeverity
 	// annotationsEnabled gates whether GitHub output wraps lines in workflow
@@ -126,9 +124,9 @@ func (o *Output) Printf(format string, a ...interface{}) error {
 		// must stay a real newline so each workflow command sits on its own
 		// line. Only the message body gets escaped.
 		if strings.HasSuffix(s, "\n") {
-			s = githubCommand(string(o.severity), o.currentFile, strings.TrimSuffix(s, "\n")) + "\n"
+			s = githubCommand(string(o.severity), strings.TrimSuffix(s, "\n")) + "\n"
 		} else {
-			s = githubCommand(string(o.severity), o.currentFile, s)
+			s = githubCommand(string(o.severity), s)
 		}
 	default:
 		s = emoji.Sprintf(format, a...)
@@ -138,18 +136,12 @@ func (o *Output) Printf(format string, a ...interface{}) error {
 }
 
 // githubCommand formats a GitHub Actions workflow command (annotation).
-// See https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#setting-a-notice-message-with-file-location-and-custom-title
-func githubCommand(severity, file, message string) string {
-	var attrs []string
-	if file != "" {
-		attrs = append(attrs, "file="+escapeWorkflow(file))
-	}
-	command := "::" + severity
-	if len(attrs) > 0 {
-		command += " " + strings.Join(attrs, ",")
-	}
-	command += "::" + escapeWorkflow(message)
-	return command
+// The optional file/line/endLine/title properties are deliberately omitted:
+// go-ftw has no per-test line information, and a file without a line renders
+// as a misleading `#L0` anchor.
+// See https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions
+func githubCommand(severity, message string) string {
+	return "::" + severity + "::" + escapeWorkflow(message)
 }
 
 // escapeWorkflow escapes the characters that are not allowed inside a GitHub
@@ -212,18 +204,6 @@ func (o *Output) IsJson() bool {
 
 func (o *Output) IsMarkdown() bool {
 	return o.OutputType == Markdown
-}
-
-// SetCurrentTestFile sets the file path used as the annotation location for
-// GitHub output. Pass an empty string to clear it.
-func (o *Output) SetCurrentTestFile(file string) {
-	o.currentFile = file
-}
-
-// ClearCurrentTestFile resets the annotation file so subsequent output is no
-// longer annotated with a file location.
-func (o *Output) ClearCurrentTestFile() {
-	o.currentFile = ""
 }
 
 // SetSeverity overrides the severity used for GitHub annotation commands.
