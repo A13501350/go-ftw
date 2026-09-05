@@ -98,3 +98,17 @@ func (s *outputTestSuite) TestGitHubAnnotationEscapesSpecialChars() {
 	s.Require().NoError(err)
 	s.Equal("::notice::100%25 done%0Awith newline", b.String())
 }
+
+// Println's line break must remain a real newline: GitHub only parses one
+// workflow command per line, so escaping it would glue every command into a
+// single (rejected) annotation.
+func (s *outputTestSuite) TestGitHubAnnotationPrintlnKeepsRealNewline() {
+	var b bytes.Buffer
+	o := NewOutput("github", &b)
+
+	err := o.Println("+ passed in %s", "5ms")
+	s.Require().NoError(err)
+	err = o.Println("- failed")
+	s.Require().NoError(err)
+	s.Equal("::notice::+ passed in 5ms\n::notice::- failed\n", b.String())
+}

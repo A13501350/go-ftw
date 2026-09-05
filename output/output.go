@@ -93,7 +93,14 @@ func (o *Output) Printf(format string, a ...interface{}) error {
 		s = fmt.Sprintf(format, a...)
 	case GitHub:
 		s = fmt.Sprintf(format, a...)
-		s = githubCommand(string(o.severity), o.currentFile, s)
+		// Println appends the line break to the format string; that break
+		// must stay a real newline so each workflow command sits on its own
+		// line. Only the message body gets escaped.
+		if strings.HasSuffix(s, "\n") {
+			s = githubCommand(string(o.severity), o.currentFile, strings.TrimSuffix(s, "\n")) + "\n"
+		} else {
+			s = githubCommand(string(o.severity), o.currentFile, s)
+		}
 	default:
 		s = emoji.Sprintf(format, a...)
 	}
