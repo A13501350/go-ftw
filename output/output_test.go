@@ -96,7 +96,9 @@ func (s *outputTestSuite) TestGitHubAnnotationEscapesSpecialChars() {
 
 	err := o.Printf("100%% done\r\nwith: %s, ok", "newline")
 	s.Require().NoError(err)
-	s.Equal("::notice::100%25 done%0D%0Awith%3A newline%2C ok", b.String())
+	// Only '%', CR and LF are escaped in the message body (per the actions
+	// runner): ':' and ',' pass through untouched.
+	s.Equal("::notice::100%25 done%0D%0Awith: newline, ok", b.String())
 }
 
 // Println's line break must remain a real newline: GitHub only parses one

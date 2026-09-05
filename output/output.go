@@ -104,10 +104,6 @@ func (o *Output) Printf(format string, a ...interface{}) error {
 }
 
 // githubCommand formats a GitHub Actions workflow command (annotation).
-// The optional file/line/endLine/title properties are deliberately omitted:
-// go-ftw has no per-test line information, and a file without a line renders
-// as a misleading `#L0` anchor.
-// See https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions
 func githubCommand(severity, message string) string {
 	return "::" + severity + "::" + escapeWorkflow(message)
 }
@@ -118,8 +114,6 @@ func escapeWorkflow(s string) string {
 	s = strings.ReplaceAll(s, "%", "%25")
 	s = strings.ReplaceAll(s, "\r", "%0D")
 	s = strings.ReplaceAll(s, "\n", "%0A")
-	s = strings.ReplaceAll(s, ":", "%3A")
-	s = strings.ReplaceAll(s, ",", "%2C")
 	return s
 }
 
